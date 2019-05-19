@@ -11,6 +11,11 @@ library(rio)
 library(here)
 
 data <- import(here("data", "movie_metadata.csv_movie_metadata.csv"))
+
+data <- data %>%
+  mutate(gross = as.numeric(gross),
+         budget = as.numeric(budget),
+         profit = gross-budget)
 ```
 
 ```{r Custom Function 1}
@@ -37,3 +42,4 @@ descriptives <- function(x) {
 
 descriptives(data$imdb_score)
 ```
+
