@@ -28,3 +28,12 @@ average_imdb <- function(x) {
 
 average_imdb("Tom Cruise")
 ```
+```{r Custom Function 2}
+#Create a custom function that will pull out descriptive statistics for a variable
+
+descriptives <- function(x) {
+  data.frame(mean(x), sd(x), min(x), max(x))
+  }
+
+descriptives(data$imdb_score)
+```
