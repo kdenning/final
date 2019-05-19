@@ -40,6 +40,7 @@ descriptives <- function(x) {
   data.frame(mean(x), sd(x), min(x), max(x))
   }
 
+#Test if it works
 descriptives(data$imdb_score)
 ```
 
