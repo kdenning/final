@@ -32,6 +32,9 @@ average_imdb <- function(x) {
 #Test function, provide actor name in quotes to get their average imdb_score
 
 average_imdb("Tom Cruise")
+average_imdb("Johnny Depp")
+average_imdb("Will Smith")
+
 ```
 ```{r Custom Function 2}
 #Create a custom function that will pull out descriptive statistics for a variable
