@@ -9,6 +9,7 @@ output: html_document
 library(tidyverse)
 library(rio)
 library(here)
+library(stringr)
 
 data <- import(here("data", "movie_metadata.csv_movie_metadata.csv"))
 
@@ -40,10 +41,29 @@ average_imdb("Will Smith")
 #Create a custom function that will pull out descriptive statistics for a variable
 
 descriptives <- function(x) {
-  data.frame(mean(x), sd(x), min(x), max(x))
+  data.frame(mean(x), sd(x), min(x), max(x), length(x))
   }
 
 #Test if it works
 descriptives(data$imdb_score)
+```
+
+```{r}
+
+# let's nest our data by genre
+
+df_genre <- data %>% 
+  group_by(genres)%>%
+  nest()
+
+# let's nest our data by country 
+
+df_country <- data %>% 
+  drop_na()%>%
+  group_by(country)%>%
+  nest()
+
+# Country seems to be a more reasonable grouping variable to work with - In genres there seems to be a lot of combinations of different genres - however, there are countries with too few observations, so it might be 
+
 ```
 
