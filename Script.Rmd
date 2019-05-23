@@ -99,7 +99,8 @@ df_main_genre <- data_new%>%
 Now let's map through the list to run a regression predicting profit from number of facebook likes for the movie 
 
 ```{r}
-map(df_main_genre, ~lm(profit~main_genre, data=data))
+
+map(df_main_genre[[2]], ~lm(profit~movie_facebook_likes, .x))
 
 ```
 
