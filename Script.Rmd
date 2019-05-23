@@ -102,6 +102,28 @@ Now let's map through the list to run a regression predicting profit from number
 
 map(df_main_genre[[2]], ~lm(profit~movie_facebook_likes, .x))
 
+#but actually, I think it might be better if I bouild that data fram as a list of lists 
+
+#season to wave 
+df_mg_list <- data_new %>%
+  select(-genres_2, -genres_3, -genres_4, -genres_5, -genres_6, -genres_7, -genres_8)%>%
+    as_tibble()
+
+
+by_main_genre <- split(df_mg_list, df_mg_list$main_genre)
+
+
+model <- map(by_main_genre, ~lm(profit ~ movie_facebook_likes, .x))
+
+#model
+
+coefs <- map(model, ~coef(.x))
+
+slopes <- map_dbl(coefs, 2)
+
+
+# I think splitting works better for this then nesting, but I'm leaving both methods for now, and then wecan decide if we want to keep one or the other or both 
+
 ```
 
 
