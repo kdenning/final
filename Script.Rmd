@@ -10,6 +10,8 @@ library(tidyverse)
 library(rio)
 library(here)
 library(stringr)
+library(splitstackshape)
+library(magrittr)
 
 data <- import(here("data", "movie_metadata.csv_movie_metadata.csv"))
 
@@ -53,6 +55,7 @@ descriptives(data$imdb_score)
 # let's nest our data by genre
 
 df_genre <- data %>% 
+  drop_na()%>%
   group_by(genres)%>%
   nest()
 
@@ -63,7 +66,35 @@ df_country <- data %>%
   group_by(country)%>%
   nest()
 
-# Country seems to be a more reasonable grouping variable to work with - In genres there seems to be a lot of combinations of different genres - however, there are countries with too few observations, so it might be 
+# Country seems to be a more reasonable grouping variable to work with - In genres there seems to be a lot of combinations of different genres. but let's take a look at the number of observations per group for the two different categories 
+
+map(df_country$data, ~length(.x[[1]]))
+map(df_genre$data, ~length(.x[[1]]))
+```
+
+For both categories there seems to be a very uneven number of observations per group. However, in genres this might be due to the fact that there are a lot of combinations. I am going to go ahead and use a criteria to determine the genre of the movie as the first genre that appears in the combination, and then I will nest the data again according to this new criteria (I will consider the other genres within the same genre as "sub-genres")
+
+```{r}
+#let's separate the combination of genres for each movie and keep the first genre as main genre in a new variable
+
+data_new <- data%>%
+  drop_na()
+
+
+data_new<- cSplit(data_new, "genres", "|")
+
+data_new %<>% rename(main_genre = genres_1)
+
+#now let's nest data by main genre 
+
+df_main_genre <- data_new%>% 
+  select(-genres_2, -genres_3, -genres_4, -genres_5, -genres_6, -genres_7, -genres_8)%>%
+  group_by(main_genre)%>%
+  nest()
+
+
 
 ```
+
+Now let's map through the list to predict 
 
