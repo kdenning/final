@@ -148,6 +148,22 @@ model_comparison_df <- by_main_genre %>%
 
 # Eventually use map2 to pull out r^2 change to then plot
 
+#Based on Daniels suggestion 
+model_comparison_df <- by_main_genre %>% 
+  bind_rows(.id = "genre") %>% 
+  group_by(genre) %>% 
+  nest() %>% 
+  mutate(m1 = map(data, ~lm(profit ~ movie_facebook_likes, .x)),
+         m2 = map(data, ~lm(profit ~ movie_facebook_likes + imdb_score, .x)))
+
+model_comparison_df$m1[[1]]
+
+#model comparison 
+compare_modelfit <- anova(model_comparison_df$m1[[1]], model_comparison_df$m2[[1]])
+
+compare_all <- model_comparison_df %>%
+    mutate(comp12 = map2(m1, m2, anova))
+
 ```
 
 ```{r messing with coefficients}
