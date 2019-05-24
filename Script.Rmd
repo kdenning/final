@@ -14,6 +14,8 @@ library(stringr)
 library(splitstackshape)
 library(magrittr)
 
+options(scipen=999)
+
 data <- import(here("data", "movie_metadata.csv_movie_metadata.csv"))
 
 data <- data %>%
@@ -141,16 +143,12 @@ model2 <- map(by_main_genre, ~lm(profit ~ movie_facebook_likes + imdb_score, .x)
 # Trying to get our two models into a tibble that we can then compare the models and plot
 ## getting error that tibble columns are not the same length
 ## also, when we use map, we got an error that mutate wouldn't work on a list column
-model_comparison_df <- by_main_genre %>% 
-  as_tibble() %>% 
-  mutate(m1 = map(data, ~lm(profit ~ movie_facebook_likes, .x)),
-         m2 = map(data, ~lm(profit ~ movie_facebook_likes + imdb_score, .x)))
 
 # Eventually use map2 to pull out r^2 change to then plot
 
 #Based on Daniels suggestion 
 model_comparison_df <- by_main_genre %>% 
-  bind_rows(.id = "genre") %>% 
+  bind_rows(.id = "genre") %>% #for tutorial, make note on what this does and why you have to do it to use group-by
   group_by(genre) %>% 
   nest() %>% 
   mutate(m1 = map(data, ~lm(profit ~ movie_facebook_likes, .x)),
@@ -162,7 +160,12 @@ model_comparison_df$m1[[1]]
 compare_modelfit <- anova(model_comparison_df$m1[[1]], model_comparison_df$m2[[1]])
 
 compare_all <- model_comparison_df %>%
-    mutate(comp12 = map2(m1, m2, anova))
+    mutate(anova_output = map2(m1, m2, anova),
+           p_val = map_dbl(anova_output, list("Pr(>F)", 2)))
+
+compare_all_tidy <- compare_all %>% 
+  gather(model, output, m1:m2) %>% 
+  mutate(r_square = map_dbl(output, ~summary(.x)$r.squared))
 
 ```
 
