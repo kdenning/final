@@ -10,6 +10,7 @@ library(tidyverse)
 library(rio)
 library(here)
 library(stringr)
+#install.packages("splitstackshape")
 library(splitstackshape)
 library(magrittr)
 
@@ -39,6 +40,7 @@ average_imdb("Johnny Depp")
 average_imdb("Will Smith")
 
 ```
+
 ```{r Custom Function 2}
 #Create a custom function that will pull out descriptive statistics for a variable
 
@@ -62,7 +64,7 @@ df_genre <- data %>%
 # let's nest our data by country 
 
 df_country <- data %>% 
-  drop_na()%>%
+  drop_na() %>%
   group_by(country)%>%
   nest()
 
@@ -122,8 +124,57 @@ coefs <- map(model, ~coef(.x))
 slopes <- map_dbl(coefs, 2)
 
 
+
 # I think splitting works better for this then nesting, but I'm leaving both methods for now, and then wecan decide if we want to keep one or the other or both 
 
 ```
 
 
+
+```{r map 2 to get model comparisons}
+# As seen above, you can use map to extract the coefficients separately, but what if we wanted to do that AND extract the ses all at once? That's where map2 comes in!
+
+# compare model 1 vs model 2, model 2 adds a second predictor (imbd score) to see if there is a better fit
+
+model2 <- map(by_main_genre, ~lm(profit ~ movie_facebook_likes + imdb_score, .x))
+
+# Trying to get our two models into a tibble that we can then compare the models and plot
+## getting error that tibble columns are not the same length
+## also, when we use map, we got an error that mutate wouldn't work on a list column
+model_comparison_df <- by_main_genre %>% 
+  as_tibble() %>% 
+  mutate(m1 = map(data, ~lm(profit ~ movie_facebook_likes, .x)),
+         m2 = map(data, ~lm(profit ~ movie_facebook_likes + imdb_score, .x)))
+
+# Eventually use map2 to pull out r^2 change to then plot
+
+```
+
+```{r messing with coefficients}
+# getting the slopes for model 1
+slopes1 <- map_df(coefs, 2)
+slopes1 %<>% 
+  gather(movie_title, slopes_m1)
+
+# getting the intercepts for model 1
+intercepts1 <- map_df(coefs, 1)
+intercepts1 %<>%
+  gather(movie_title, intercepts_m1)
+
+# getting the slopes for model 2
+coefs2 <- map(model2, ~coef(.x))
+slopes2 <- map_df(coefs2, 2)
+slopes2 %<>% 
+  gather(movie_title, slopes_m2)
+
+# getting the intercepts for model 2
+intercepts2 <- map_df(coefs2, 1)
+intercepts2 %<>%
+  gather(movie_title, intercepts_m2)
+
+# merging the dataframes together
+
+join_model1 <- left_join(intercepts1, slopes1)
+join_model2 <- left_join(intercepts2, slopes2)
+models_combined <- left_join(join_model1, join_model2)
+```
