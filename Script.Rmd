@@ -13,6 +13,7 @@ library(stringr)
 #install.packages("splitstackshape")
 library(splitstackshape)
 library(magrittr)
+library(glue)
 
 options(scipen=999)
 
@@ -82,7 +83,8 @@ For both categories there seems to be a very uneven number of observations per g
 #let's separate the combination of genres for each movie and keep the first genre as main genre in a new variable
 
 data_new <- data%>%
-  drop_na()
+ drop_na() %>%
+ filter(movie_facebook_likes != "0")
 
 
 data_new<- cSplit(data_new, "genres", "|")
@@ -91,11 +93,12 @@ data_new %<>% rename(main_genre = genres_1)
 
 #now let's nest data by main genre 
 
-df_main_genre <- data_new%>% 
-  select(-genres_2, -genres_3, -genres_4, -genres_5, -genres_6, -genres_7, -genres_8)%>%
-  group_by(main_genre)%>%
-  nest()
-
+df_main_genre <- data_new%>%
+ select(-genres_2, -genres_3, -genres_4, -genres_5, -genres_6, -genres_7, -genres_8) %>%
+ filter(!grepl('Thriller|Western|Musical|Family|Romance|Sci-Fi', main_genre)) %>%
+# need to remove thriller, western, musical, family, romance, sci_fi for having less than 5 movies
+ group_by(main_genre) %>%
+ nest()
 
 
 ```
@@ -110,8 +113,12 @@ map(df_main_genre[[2]], ~lm(profit~movie_facebook_likes, .x))
 
 #season to wave 
 df_mg_list <- data_new %>%
-  select(-genres_2, -genres_3, -genres_4, -genres_5, -genres_6, -genres_7, -genres_8)%>%
-    as_tibble()
+ select(-genres_2, -genres_3, -genres_4, -genres_5, -genres_6, -genres_7, -genres_8)%>%
+ mutate(main_genre = as.factor(main_genre)) %>%
+ filter(!grepl('Thriller|Western|Musical|Family|Romance|Sci-Fi', main_genre)) %>%
+ droplevels(data_new$main_genre) %>%
+# need to remove thriller, western, musical, family, romance, sci_fi for having less than 5 movies
+   as_tibble()
 
 
 by_main_genre <- split(df_mg_list, df_mg_list$main_genre)
@@ -146,13 +153,15 @@ model2 <- map(by_main_genre, ~lm(profit ~ movie_facebook_likes + imdb_score, .x)
 
 # Eventually use map2 to pull out r^2 change to then plot
 
-#Based on Daniels suggestion 
+
 model_comparison_df <- by_main_genre %>% 
   bind_rows(.id = "genre") %>% #for tutorial, make note on what this does and why you have to do it to use group-by
   group_by(genre) %>% 
+  na.omit() %>% 
   nest() %>% 
   mutate(m1 = map(data, ~lm(profit ~ movie_facebook_likes, .x)),
          m2 = map(data, ~lm(profit ~ movie_facebook_likes + imdb_score, .x)))
+  
 
 model_comparison_df$m1[[1]]
 
@@ -169,31 +178,79 @@ compare_all_tidy <- compare_all %>%
 
 ```
 
-```{r messing with coefficients}
-# getting the slopes for model 1
-slopes1 <- map_df(coefs, 2)
-slopes1 %<>% 
-  gather(movie_title, slopes_m1)
+```{r making plots}
+#show r-square for both models in one plot for all genres
+rsquare_plots <- compare_all_tidy %>%  
+ggplot(aes(model, r_square)) +
+    geom_col(aes(fill = model)) +
+    facet_wrap(~genre) +
+    guides(fill = "none") +
+    scale_fill_brewer(palette = "Set2")
 
-# getting the intercepts for model 1
-intercepts1 <- map_df(coefs, 1)
-intercepts1 %<>%
-  gather(movie_title, intercepts_m1)
 
-# getting the slopes for model 2
-coefs2 <- map(model2, ~coef(.x))
-slopes2 <- map_df(coefs2, 2)
-slopes2 %<>% 
-  gather(movie_title, slopes_m2)
+#unnest and tidy to be able to plot coefs
 
-# getting the intercepts for model 2
-intercepts2 <- map_df(coefs2, 1)
-intercepts2 %<>%
-  gather(movie_title, intercepts_m2)
+coefs_plot <- model_comparison_df %>%
+    gather(model, output, m1:m2) %>%
+    mutate(tidied = map(output, broom::tidy)) %>% 
+    select(genre, model, tidied) %>%
+    unnest()
 
-# merging the dataframes together
+#get movies names for plots 
+to_plot_coefs <- names(coef(model_comparison_df$m1[[1]])) 
 
-join_model1 <- left_join(intercepts1, slopes1)
-join_model2 <- left_join(intercepts2, slopes2)
-models_combined <- left_join(join_model1, join_model2)
+#plot all genres together
+ploting_df_coefs <- coefs_plot %>%
+    filter(term %in% to_plot_coefs) %>%
+ggplot(aes(estimate, term, color = model)) +
+    geom_point() +
+    scale_color_brewer(palette = "Set1") +
+    facet_wrap(~genre) +
+  theme_minimal() +
+  labs(x = "Coefficient",
+       title = "Plot of Model Fit for Number of Facebook Likes and IMDB Score Predicting Movie Profit",
+       subtitle = "Displayed by Genre")
+  
+
 ```
+
+```{r saving plots}
+
+#plot genres separately
+
+#group by genre and nest to be able to use pmap    
+for_plotting <- coefs_plot %>% 
+    bind_rows(.id = "id") %>% 
+    group_by(genre) %>% 
+    nest()
+
+#make all plots using pmap 
+profit_by_genre <- for_plotting %>% 
+    mutate(plot = pmap(list(data, genre),
+    ~ggplot(..1, aes(term, estimate, color = model)) +
+    geom_point(size = 3) +
+    scale_color_brewer(palette = "Set1", name = "Model", labels = c("1", "2")) +
+    theme_minimal() +
+    labs(x = "Coefficient",
+         y = "Profit in Dollars",
+       title =  glue("Model fit predicting profit for {..2} movies")) +
+      scale_x_discrete(labels = c("Intercept", "IMDB Score", "Facebook"))))
+    
+#test a few plots
+profit_by_genre$plot[[5]]
+profit_by_genre$plot[[6]]
+
+#create directory (folder) for plots
+#fs::dir_create(here::here("plots", "profit_by_genre"))
+
+files <- str_replace_all(tolower(profit_by_genre$genre), " ", "-")
+paths <- here::here("plots", "profit_by_genre", glue("{files}.png"))
+paths
+
+#this is where you are saving the plots to the folder you made
+walk2(paths, profit_by_genre$plot, ggsave,
+      width = 9.5, 
+      height = 6.5,
+      dpi = 500)
+```
+
