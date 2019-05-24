@@ -144,16 +144,11 @@ slopes <- map_dbl(coefs, 2)
 # As seen above, you can use map to extract the coefficients separately, but what if we wanted to do that AND extract the ses all at once? That's where map2 comes in!
 
 # compare model 1 vs model 2, model 2 adds a second predictor (imbd score) to see if there is a better fit
+## this is just showing the second model as an example for the tutorial
 
 model2 <- map(by_main_genre, ~lm(profit ~ movie_facebook_likes + imdb_score, .x))
 
-# Trying to get our two models into a tibble that we can then compare the models and plot
-## getting error that tibble columns are not the same length
-## also, when we use map, we got an error that mutate wouldn't work on a list column
-
-# Eventually use map2 to pull out r^2 change to then plot
-
-
+# Get our two models into a tibble that we can then compare the models and plot
 model_comparison_df <- by_main_genre %>% 
   bind_rows(.id = "genre") %>% #for tutorial, make note on what this does and why you have to do it to use group-by
   group_by(genre) %>% 
@@ -168,10 +163,13 @@ model_comparison_df$m1[[1]]
 #model comparison 
 compare_modelfit <- anova(model_comparison_df$m1[[1]], model_comparison_df$m2[[1]])
 
+# putting the model comparison into a dataset that has extracted the p-value
+## This is where you use map2 to loop through each of the model lists and compare them with Anova
 compare_all <- model_comparison_df %>%
     mutate(anova_output = map2(m1, m2, anova),
            p_val = map_dbl(anova_output, list("Pr(>F)", 2)))
 
+# tidying the data so that we have the models in long-format and extracting r-square for each model as its own column
 compare_all_tidy <- compare_all %>% 
   gather(model, output, m1:m2) %>% 
   mutate(r_square = map_dbl(output, ~summary(.x)$r.squared))
