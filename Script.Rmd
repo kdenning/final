@@ -30,7 +30,7 @@ data <- data %>%
 
 average_imdb <- function(x) {
  df <- aggregate(imdb_score ~ actor_1_name, data, mean)
- 
+ #I  havent used this aggregate function before, but it looks really cool for summarizing the elements you are interested in 
  row.names(df) <- df$actor_1_name 
  
  df[x,"imdb_score"]
@@ -61,6 +61,7 @@ descriptives(data$imdb_score)
 
 df_genre <- data %>% 
   drop_na()%>%
+  #good use of drop NA, I just learned this recently and it's been a huge help
   group_by(genres)%>%
   nest()
 
@@ -75,19 +76,24 @@ df_country <- data %>%
 
 map(df_country$data, ~length(.x[[1]]))
 map(df_genre$data, ~length(.x[[1]]))
+#good use of map to compare two different groups, you could even write a function that compares these two groups side-by-side or takes the difference
 ```
 
 For both categories there seems to be a very uneven number of observations per group. However, in genres this might be due to the fact that there are a lot of combinations. I am going to go ahead and use a criteria to determine the genre of the movie as the first genre that appears in the combination, and then I will nest the data again according to this new criteria (I will consider the other genres within the same genre as "sub-genres")
 
 ```{r}
+#Are you going to do anything with the country variable or just using it as an example?
 #let's separate the combination of genres for each movie and keep the first genre as main genre in a new variable
+#do you know how the first variable is placed before the second variable, is it alphabetical or is there a system behind the order of the genres?
 
 data_new <- data%>%
  drop_na() %>%
+#what are you filtering out here? Movies that didn't get any likes on Facebook? Is this common?
  filter(movie_facebook_likes != "0")
 
 
 data_new<- cSplit(data_new, "genres", "|")
+#I haven't seen this cSplit function before but it looks perfect for your situation, if you want to stay in the tidyverse you could probably do this with separate function
 
 data_new %<>% rename(main_genre = genres_1)
 
@@ -108,6 +114,7 @@ Now let's map through the list to run a regression predicting profit from number
 ```{r}
 
 map(df_main_genre[[2]], ~lm(profit~movie_facebook_likes, .x))
+#not sure if this is just me, but I received an error that object profit could not be found, I can see it in df_main_genre, but my R is having a hard time accesssing it. 
 
 #but actually, I think it might be better if I bouild that data fram as a list of lists 
 
@@ -132,7 +139,7 @@ coefs <- map(model, ~coef(.x))
 
 slopes <- map_dbl(coefs, 2)
 
-
+#everything worked with this second version, so I agree this is a better choice
 
 # I think splitting works better for this then nesting, but I'm leaving both methods for now, and then wecan decide if we want to keep one or the other or both 
 
@@ -168,6 +175,7 @@ compare_modelfit <- anova(model_comparison_df$m1[[1]], model_comparison_df$m2[[1
 compare_all <- model_comparison_df %>%
     mutate(anova_output = map2(m1, m2, anova),
            p_val = map_dbl(anova_output, list("Pr(>F)", 2)))
+#Awesome use of map2 to help you with your model comparison!
 
 # tidying the data so that we have the models in long-format and extracting r-square for each model as its own column
 compare_all_tidy <- compare_all %>% 
@@ -188,7 +196,8 @@ ggplot(aes(model, r_square)) +
     facet_wrap(~genre) +
     guides(fill = "none") +
     scale_fill_brewer(palette = "Set2")
-
+#these plots look great, make sure to remind us that this is comparing model fit and what variables we are comparing, since we've take mandy steps since the original question was posed. 
+# I think it makes sense to keep the plots in alphabetical order but you could also arrange by model fit
 ```
 
 This probably won't be included in the final tutorial but I'll leave it just in case because we are using coefs_plot for our final plots.  
@@ -242,7 +251,7 @@ profit_by_genre <- for_plotting %>%
          y = "Profit in Dollars",
        title =  glue("Model fit predicting profit for {..2} movies")) +
       scale_x_discrete(labels = c("Intercept", "IMDB Score", "Facebook"))))
-    
+#You might want to increase dot size here to make it a little more visible    
 
 #We want to test a few to make sure they are working properly. If we type profit_by_genre it won't automatically display all the plots. 
 
