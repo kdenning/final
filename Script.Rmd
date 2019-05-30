@@ -2,7 +2,8 @@
 title: "Script"
 author: "Kathryn Denning, Karlena Ochoa, Jenn Lewis, Tamara Niella"
 date: "5/14/2019"
-output: html_document
+output:
+  html_document: default
 ---
 
 ```{r setup}
@@ -14,6 +15,8 @@ library(stringr)
 library(splitstackshape)
 library(magrittr)
 library(glue)
+library(distill)
+# added this line here because my R needs this to run : )
 
 options(scipen=999)
 
@@ -27,7 +30,7 @@ data <- data %>%
 
 ```{r Custom Function 1}
 #Make a function that tells you the average imdb rating for a specfic actor; this function will only work within this data set
-
+# Great and detailed comments on the environment!
 average_imdb <- function(x) {
  df <- aggregate(imdb_score ~ actor_1_name, data, mean)
  
@@ -37,7 +40,7 @@ average_imdb <- function(x) {
     }
 
 #Test function, provide actor name in quotes to get their average imdb_score
-
+# Good idea to test it first!
 average_imdb("Tom Cruise")
 average_imdb("Johnny Depp")
 average_imdb("Will Smith")
@@ -56,7 +59,7 @@ descriptives(data$imdb_score)
 ```
 
 ```{r}
-
+# maybe more helpful to name the chunks
 # let's nest our data by genre
 
 df_genre <- data %>% 
@@ -75,6 +78,7 @@ df_country <- data %>%
 
 map(df_country$data, ~length(.x[[1]]))
 map(df_genre$data, ~length(.x[[1]]))
+# maybe change this chuck's setting to hide immediate output if we don't need them there for the final script
 ```
 
 For both categories there seems to be a very uneven number of observations per group. However, in genres this might be due to the fact that there are a lot of combinations. I am going to go ahead and use a criteria to determine the genre of the movie as the first genre that appears in the combination, and then I will nest the data again according to this new criteria (I will consider the other genres within the same genre as "sub-genres")
@@ -229,7 +233,7 @@ for_plotting <- coefs_plot %>%
     group_by(genre) %>% 
     nest()
 
-#We will us pmap because it will allow us to loop through two or more vectors. In this case we will only be looping through 2, but if we decided to loop through 3 we could add a label for each of the. When using pmap you need to first say what the list is; in our case we will put pmap(list(data, genre). Now they are in a list we can refer to them in their position. For example, data can be referred to as ..1, and genre will be ..2. In order to create each plot we will use mutate and save it to "plot". From there we just ggplot like we regularly would. We will put ..1 as our data input because that says pull from the data list column.
+#We will use pmap because it will allow us to loop through two or more vectors. In this case we will only be looping through 2, but if we decided to loop through 3 we could add a label for each of the. When using pmap you need to first say what the list is; in our case we will put pmap(list(data, genre). Now they are in a list we can refer to them in their position. For example, data can be referred to as ..1, and genre will be ..2. In order to create each plot we will use mutate and save it to "plot". From there we just ggplot like we regularly would. We will put ..1 as our data input because that says pull from the data list column.
 
 #make all plots using pmap 
 profit_by_genre <- for_plotting %>% 
