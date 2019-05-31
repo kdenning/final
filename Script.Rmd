@@ -48,8 +48,14 @@ average_imdb("Will Smith")
 #Create a custom function that will pull out descriptive statistics for a variable
 
 descriptives <- function(x) {
-  data.frame(mean(x), sd(x), min(x), max(x), length(x))
-  }
+  data.frame(mean = mean(x),
+             sd = sd(x),
+             minimum = min(x),
+             maximum = max(x),
+             N = length(x))
+}
+
+#Named the columns of the descriptives table and changed the style of code a bit. 
 
 #Test if it works
 descriptives(data$imdb_score)
@@ -86,10 +92,11 @@ data_new <- data%>%
  drop_na() %>%
  filter(movie_facebook_likes != "0")
 
-
 data_new<- cSplit(data_new, "genres", "|")
 
 data_new %<>% rename(main_genre = genres_1)
+
+#This is cool1 I did not know about %<>% before. 
 
 #now let's nest data by main genre 
 
@@ -100,7 +107,23 @@ df_main_genre <- data_new%>%
  group_by(main_genre) %>%
  nest()
 
+#Bellow I am suggesting that you can probably use the nesting by genre to produce some visualization. I was personally curious about the number of facebook likes that movies get across time and also if that is related to their imdb score. That's the reason I am suggesting the following plots. Also using at least one instance of parallel iterations is part of the requirements of the final product. This code will help meet this requirement. 
+ 
+df_main_genre_plots <- data_new %>%
+ group_by(main_genre) %>%
+ nest() %>%
+ mutate(plot = map2(data, main_genre, ~
+      ggplot(.x, aes(title_year, movie_facebook_likes)) +
+          geom_point(aes(col = imdb_score)) +
+        scale_color_viridis_c()+
+          labs(x = "",
+            y = "Number of Facebook likes",
+            title = glue("Number of Facebook likes: {.y}"))+
+        theme_minimal()))
+  
 
+df_main_genre_plots$plot
+ 
 ```
 
 Now let's map through the list to run a regression predicting profit from number of facebook likes for the movie 
