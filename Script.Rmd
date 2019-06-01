@@ -10,23 +10,29 @@ library(tidyverse)
 library(rio)
 library(here)
 library(stringr)
-#install.packages("splitstackshape")
+#install.packages("splitstackshape") #AAC: I liked that you noted that I might have to install this package
 library(splitstackshape)
 library(magrittr)
 library(glue)
 
 options(scipen=999)
 
-data <- import(here("data", "movie_metadata.csv_movie_metadata.csv"))
+data <- import(here("data", "movie_metadata.csv_movie_metadata.csv")) #AAC: Great use of heere library
 
 data <- data %>%
   mutate(gross = as.numeric(gross),
          budget = as.numeric(budget),
          profit = gross-budget)
+
+#I might consider using chunk options to not print errors/messages
 ```
 
 ```{r Custom Function 1}
 #Make a function that tells you the average imdb rating for a specfic actor; this function will only work within this data set
+
+#AAC: Good use of description and annotation
+
+#AAC: Good function use! I learned the aggregate function.
 
 average_imdb <- function(x) {
  df <- aggregate(imdb_score ~ actor_1_name, data, mean)
@@ -42,10 +48,14 @@ average_imdb("Tom Cruise")
 average_imdb("Johnny Depp")
 average_imdb("Will Smith")
 
+#AAC: Cool data set (: )
+
 ```
 
 ```{r Custom Function 2}
 #Create a custom function that will pull out descriptive statistics for a variable
+
+#AAC: Super useful function! 
 
 descriptives <- function(x) {
   data.frame(mean(x), sd(x), min(x), max(x), length(x))
@@ -53,49 +63,58 @@ descriptives <- function(x) {
 
 #Test if it works
 descriptives(data$imdb_score)
+
+#AAC: I love that you tested it, and great meaningful function name
 ```
 
 ```{r}
 
+#AAC: I would give this chunk a meaningful name
+
 # let's nest our data by genre
 
 df_genre <- data %>% 
-  drop_na()%>%
-  group_by(genres)%>%
+  drop_na() %>% #AAC: I love this drop na function!
+  group_by(genres) %>%
   nest()
 
 # let's nest our data by country 
 
 df_country <- data %>% 
   drop_na() %>%
-  group_by(country)%>%
+  group_by(country) %>%
   nest()
 
-# Country seems to be a more reasonable grouping variable to work with - In genres there seems to be a lot of combinations of different genres. but let's take a look at the number of observations per group for the two different categories 
+# Country seems to be a more reasonable grouping variable to work with - In genres there seems to be a lot of combinations of different genres, but let's take a look at the number of observations per group for the two different categories 
 
 map(df_country$data, ~length(.x[[1]]))
 map(df_genre$data, ~length(.x[[1]]))
+
+#AAC: Great use of map and nest
 ```
 
 For both categories there seems to be a very uneven number of observations per group. However, in genres this might be due to the fact that there are a lot of combinations. I am going to go ahead and use a criteria to determine the genre of the movie as the first genre that appears in the combination, and then I will nest the data again according to this new criteria (I will consider the other genres within the same genre as "sub-genres")
 
 ```{r}
+
+#AAC: I would give this chunk a meaningful name 
+
 #let's separate the combination of genres for each movie and keep the first genre as main genre in a new variable
 
-data_new <- data%>%
+data_new <- data %>%
  drop_na() %>%
  filter(movie_facebook_likes != "0")
 
 
-data_new<- cSplit(data_new, "genres", "|")
+data_new <- cSplit(data_new, "genres", "|")
 
 data_new %<>% rename(main_genre = genres_1)
 
 #now let's nest data by main genre 
 
-df_main_genre <- data_new%>%
+df_main_genre <- data_new %>%
  select(-genres_2, -genres_3, -genres_4, -genres_5, -genres_6, -genres_7, -genres_8) %>%
- filter(!grepl('Thriller|Western|Musical|Family|Romance|Sci-Fi', main_genre)) %>%
+ filter(!grepl('Thriller|Western|Musical|Family|Romance|Sci-Fi', main_genre)) %>% #AAC: What is grepl?
 # need to remove thriller, western, musical, family, romance, sci_fi for having less than 5 movies
  group_by(main_genre) %>%
  nest()
@@ -106,6 +125,8 @@ df_main_genre <- data_new%>%
 Now let's map through the list to run a regression predicting profit from number of facebook likes for the movie 
 
 ```{r}
+
+#AAC: I would give this chunk a meaningfuk name
 
 map(df_main_genre[[2]], ~lm(profit~movie_facebook_likes, .x))
 
@@ -123,7 +144,6 @@ df_mg_list <- data_new %>%
 
 by_main_genre <- split(df_mg_list, df_mg_list$main_genre)
 
-
 model <- map(by_main_genre, ~lm(profit ~ movie_facebook_likes, .x))
 
 #model
@@ -136,6 +156,8 @@ slopes <- map_dbl(coefs, 2)
 
 # I think splitting works better for this then nesting, but I'm leaving both methods for now, and then wecan decide if we want to keep one or the other or both 
 
+#AAC: I like that you recorded your thought process. However, this chunk gave me an error and said "profit" was not found. Weird. 
+
 ```
 
 
@@ -147,6 +169,8 @@ slopes <- map_dbl(coefs, 2)
 ## this is just showing the second model as an example for the tutorial
 
 model2 <- map(by_main_genre, ~lm(profit ~ movie_facebook_likes + imdb_score, .x))
+
+#AAC: I liked that you used map to compare moddels. I know we talked about it in class, but I wasn't sure what it really would look like until I saw your code. Thanks!
 
 # Get our two models into a tibble that we can then compare the models and plot
 model_comparison_df <- by_main_genre %>% 
@@ -173,6 +197,8 @@ compare_all <- model_comparison_df %>%
 compare_all_tidy <- compare_all %>% 
   gather(model, output, m1:m2) %>% 
   mutate(r_square = map_dbl(output, ~summary(.x)$r.squared))
+
+##AAC: However, this chunk gave me an error and said "by_main_genre" was not found. Weird. 
 
 ```
 
@@ -242,6 +268,8 @@ profit_by_genre <- for_plotting %>%
          y = "Profit in Dollars",
        title =  glue("Model fit predicting profit for {..2} movies")) +
       scale_x_discrete(labels = c("Intercept", "IMDB Score", "Facebook"))))
+
+#AAC: I really like how you included a section on saving plots -I feel like this is always the most confusing part for me! 
     
 
 #We want to test a few to make sure they are working properly. If we type profit_by_genre it won't automatically display all the plots. 
