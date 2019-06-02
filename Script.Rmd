@@ -42,6 +42,8 @@ average_imdb("Tom Cruise")
 average_imdb("Johnny Depp")
 average_imdb("Will Smith")
 
+# Great job here! Could add a meaningful error message for when there is no actor who
+# matches the query or the actor name is misspelled
 ```
 
 ```{r Custom Function 2}
@@ -53,6 +55,9 @@ descriptives <- function(x) {
 
 #Test if it works
 descriptives(data$imdb_score)
+
+# This is another helpful, straightforward function - good job! Could consider making the
+# variable names more meaningful
 ```
 
 ```{r}
@@ -95,6 +100,7 @@ data_new %<>% rename(main_genre = genres_1)
 
 df_main_genre <- data_new%>%
  select(-genres_2, -genres_3, -genres_4, -genres_5, -genres_6, -genres_7, -genres_8) %>%
+# I wonder if there's a programmatic way to select the genre columns you want/don't want?
  filter(!grepl('Thriller|Western|Musical|Family|Romance|Sci-Fi', main_genre)) %>%
 # need to remove thriller, western, musical, family, romance, sci_fi for having less than 5 movies
  group_by(main_genre) %>%
@@ -106,7 +112,7 @@ df_main_genre <- data_new%>%
 Now let's map through the list to run a regression predicting profit from number of facebook likes for the movie 
 
 ```{r}
-
+# The below line throws an error ("object 'profit' not found")
 map(df_main_genre[[2]], ~lm(profit~movie_facebook_likes, .x))
 
 #but actually, I think it might be better if I bouild that data fram as a list of lists 
@@ -189,6 +195,8 @@ ggplot(aes(model, r_square)) +
     guides(fill = "none") +
     scale_fill_brewer(palette = "Set2")
 
+# It's hard to track what the models are fitting and what the graph is supposed to show.
+# I know y'all will flesh this out in the tutorial, so I'm not too worried about it :)
 ```
 
 This probably won't be included in the final tutorial but I'll leave it just in case because we are using coefs_plot for our final plots.  
