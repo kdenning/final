@@ -15,6 +15,12 @@ library(splitstackshape)
 library(magrittr)
 library(glue)
 
+
+knitr::opts_chunk$set(echo = TRUE, 
+                      warning = FALSE, 
+                      message = FALSE)
+
+
 options(scipen=999)
 
 data <- import(here("data", "movie_metadata.csv_movie_metadata.csv"))
@@ -73,8 +79,23 @@ df_country <- data %>%
 
 # Country seems to be a more reasonable grouping variable to work with - In genres there seems to be a lot of combinations of different genres. but let's take a look at the number of observations per group for the two different categories 
 
-map(df_country$data, ~length(.x[[1]]))
-map(df_genre$data, ~length(.x[[1]]))
+map_dbl(df_country$data, ~length(.x[[1]])) %>%  
+  as.tibble() %>% 
+  rename(n_obs = value) 
+
+##--- using map_dbl + tibble to avoid a long list being generated -Teresa
+
+map_dbl(df_genre$data, ~length(.x[[1]])) %>% 
+  as.tibble() %>% 
+  rename(n_obs = value)
+
+##--- using map_dbl + tibble to avoid a long list being generated -Teresa 
+
+df_genre %>% 
+  mutate(n_obs = map_dbl(data, ~length(.[[1]]))) %>% 
+  arrange(n_obs)
+
+##--- changing the code into this to include group names in addition to n_obs -Teresa
 ```
 
 For both categories there seems to be a very uneven number of observations per group. However, in genres this might be due to the fact that there are a lot of combinations. I am going to go ahead and use a criteria to determine the genre of the movie as the first genre that appears in the combination, and then I will nest the data again according to this new criteria (I will consider the other genres within the same genre as "sub-genres")
@@ -107,7 +128,9 @@ Now let's map through the list to run a regression predicting profit from number
 
 ```{r}
 
-map(df_main_genre[[2]], ~lm(profit~movie_facebook_likes, .x))
+# map(df_main_genre[[2]], ~lm(profit~movie_facebook_likes, .x)) 
+
+##---the above code doesn't work at my end -Teresa
 
 #but actually, I think it might be better if I bouild that data fram as a list of lists 
 
@@ -192,6 +215,7 @@ ggplot(aes(model, r_square)) +
 ```
 
 This probably won't be included in the final tutorial but I'll leave it just in case because we are using coefs_plot for our final plots.  
+
 ```{r}
 #unnest and tidy to be able to plot coefs
 coefs_plot <- model_comparison_df %>%
@@ -219,6 +243,7 @@ ggplot(aes(estimate, term, color = model)) +
 In order to use pmap to get a separate plot for each genre, we will need to group by Genre and then nest. This will each us two columns - the first genre, and then all the data in a list column called date. This is where we will being pulling information in order to plot them. 
 
 We will us pmap because it will allow us to loop through two or more vectors. In this case we will only be looping through 2, but if we decided to loop through 3 we could add a label for each of the. When using pmap you need to first say what the list is; in our case we will put pmap(list(data, genre). Now they are in a list we can refer to them in their position. For example, data can be referred to as ..1, and genre will be ..2. In order to create each plot we will use mutate and save it to "plot". From there we just ggplot like we regularly would. We will put ..1 as our data input because that says pull from the data list column. 
+
 ```{r saving plots}
 
 #plot genres separately
