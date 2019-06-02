@@ -189,6 +189,7 @@ ggplot(aes(model, r_square)) +
     guides(fill = "none") +
     scale_fill_brewer(palette = "Set2")
 
+rsquare_plots
 ```
 
 This probably won't be included in the final tutorial but I'll leave it just in case because we are using coefs_plot for our final plots.  
@@ -200,8 +201,12 @@ coefs_plot <- model_comparison_df %>%
     select(genre, model, tidied) %>%
     unnest()
 
+
+
 #get movies names for plots 
 to_plot_coefs <- names(coef(model_comparison_df$m1[[1]])) 
+
+
 
 #plot all genres together
 ploting_df_coefs <- coefs_plot %>%
@@ -214,6 +219,8 @@ ggplot(aes(estimate, term, color = model)) +
   labs(x = "Coefficient",
        title = "Plot of Model Fit for Number of Facebook Likes and IMDB Score Predicting Movie Profit",
        subtitle = "Displayed by Genre")
+
+ploting_df_coefs
 ```
 
 In order to use pmap to get a separate plot for each genre, we will need to group by Genre and then nest. This will each us two columns - the first genre, and then all the data in a list column called date. This is where we will being pulling information in order to plot them. 
@@ -229,6 +236,8 @@ for_plotting <- coefs_plot %>%
     group_by(genre) %>% 
     nest()
 
+
+
 #We will us pmap because it will allow us to loop through two or more vectors. In this case we will only be looping through 2, but if we decided to loop through 3 we could add a label for each of the. When using pmap you need to first say what the list is; in our case we will put pmap(list(data, genre). Now they are in a list we can refer to them in their position. For example, data can be referred to as ..1, and genre will be ..2. In order to create each plot we will use mutate and save it to "plot". From there we just ggplot like we regularly would. We will put ..1 as our data input because that says pull from the data list column.
 
 #make all plots using pmap 
@@ -242,7 +251,8 @@ profit_by_genre <- for_plotting %>%
          y = "Profit in Dollars",
        title =  glue("Model fit predicting profit for {..2} movies")) +
       scale_x_discrete(labels = c("Intercept", "IMDB Score", "Facebook"))))
-    
+
+
 
 #We want to test a few to make sure they are working properly. If we type profit_by_genre it won't automatically display all the plots. 
 
